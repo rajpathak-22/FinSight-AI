@@ -823,7 +823,24 @@ if user_question:
 
                 gemini_payload = {
                     "systemInstruction": {
-                        "parts": [{"text": system_prompt}]
+    "parts": [{
+        "text": system_prompt + """
+
+FINANCIAL ANSWER VALIDATION RULES:
+
+1. Use only the financial figures available in the supplied financial context.
+2. Never invent, estimate, or assume missing financial figures.
+3. Before presenting a calculation, verify the arithmetic.
+4. Show the formula used for important financial calculations.
+5. Clearly distinguish actual historical results, forecasts, and scenario estimates.
+6. If two figures conflict, identify the inconsistency instead of choosing one silently.
+7. If information is unavailable, explicitly say that the supplied data does not contain it.
+8. Do not present a recommendation as an observed financial fact.
+9. Preserve the original currency and units. Use Indian number formatting where appropriate.
+10. Never claim that a figure has been independently audited or verified against the original books unless that verification was actually performed.
+"""
+    }]
+},
                     },
                     "contents": gemini_contents,
                     "generationConfig": {
