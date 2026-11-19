@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import json
 
 st.set_page_config(page_title="FinSight AI", page_icon="📊", layout="wide")
 
@@ -842,6 +843,7 @@ if user_question:
 
             try:
                 import requests
+                import json
 
                 api_key = st.secrets["GEMINI_API_KEY"]
 
