@@ -795,6 +795,36 @@ for message in st.session_state.finsight_chat:
         st.markdown(message["content"])
 
 user_question = st.chat_input("Ask a question about the financial data shown above…")
+def validate_financial_kpis(context):
+    """Validate basic financial KPI calculations."""
+
+    kpis = context.get("kpis", {})
+    checks = {}
+
+    revenue = kpis.get("revenue_inr")
+    cogs = kpis.get("cogs_inr")
+    gross_profit = kpis.get("gross_profit_inr")
+    expenses = kpis.get("operating_expenses_inr")
+    operating_profit = kpis.get("operating_profit_inr")
+    operating_margin = kpis.get("operating_margin_percent")
+
+    if all(v is not None for v in [revenue, cogs, gross_profit]):
+        checks["gross_profit"] = abs(
+            (revenue - cogs) - gross_profit
+        ) < 0.01
+
+    if all(v is not None for v in [gross_profit, expenses, operating_profit]):
+        checks["operating_profit"] = abs(
+            (gross_profit - expenses) - operating_profit
+        ) < 0.01
+
+    if all(v is not None for v in [revenue, operating_profit, operating_margin]) and revenue != 0:
+        calculated_margin = (operating_profit / revenue) * 100
+        checks["operating_margin"] = abs(
+            calculated_margin - operating_margin
+        ) < 0.01
+
+    return checks
 
 if user_question:
     st.session_state.finsight_chat.append(
@@ -807,6 +837,8 @@ if user_question:
     with st.chat_message("assistant"):
         with st.spinner("Gemini is analyzing your financial data..."):
             answer = ""
+
+            financial_checks = validate_financial_kpis(financial_context)
 
             try:
                 import requests
@@ -824,7 +856,7 @@ if user_question:
                 gemini_payload = {
                     "systemInstruction": {
                         "parts": [{
-                            "text": system_prompt + """
+                            "text": system_prompt + "\n\nPYTHON VALIDATION RESULTS: " + json.dumps(financial_checks) + """
 
 FINANCIAL ANSWER VALIDATION RULES:
 
