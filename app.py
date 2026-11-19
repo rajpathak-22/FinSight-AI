@@ -5,12 +5,22 @@ import numpy as np
 import plotly.express as px
 import json
 
-st.set_page_config(page_title="FinSight AI", page_icon="📊", layout="wide")
+
+st.set_page_config(
+    page_title="FinSight AI | Financial Intelligence",
+    page_icon="📊",
+    layout="wide"
+)
 
 st.title("📊 FinSight AI")
-st.caption("AI-powered financial intelligence and business decision support")
+st.caption(
+    "Financial Intelligence | Business Performance | Predictive Analytics"
+)
 
-st.sidebar.header("Data")
+st.divider()
+
+st.sidebar.title("📂 Data Centre")
+st.sidebar.caption("Upload your financial dataset")
 uploaded_file = st.sidebar.file_uploader(
     "Upload your FinSight dataset (.xlsx)", type=["xlsx"]
 )
@@ -196,26 +206,65 @@ customer = customer.merge(
 customer = customer.sort_values("Revenue", ascending=False)
 st.dataframe(customer.head(15), use_container_width=True)
 
+
 # Receivables
 st.subheader("Receivables Risk")
+st.caption("Monitor outstanding balances and identify delayed collections.")
+
 ar = receivables.copy()
+
 ar["Ageing_Bucket"] = pd.cut(
     ar["Days_Outstanding"],
     bins=[-1, 0, 30, 60, 90, 10000],
     labels=["Current", "1–30 days", "31–60 days", "61–90 days", "90+ days"]
 )
-ar_summary = ar.groupby("Ageing_Bucket", observed=False)["Outstanding_Balance"].sum().reset_index()
-c1, c2 = st.columns(2)
-with c1:
-    fig = px.bar(ar_summary, x="Ageing_Bucket", y="Outstanding_Balance",
-                 title="Receivables Ageing")
-    st.plotly_chart(fig, use_container_width=True)
-with c2:
-    total_ar = ar["Outstanding_Balance"].sum()
-    aged_60 = ar.loc[ar["Days_Outstanding"] > 60, "Outstanding_Balance"].sum()
+
+ar_summary = (
+    ar.groupby("Ageing_Bucket", observed=False)["Outstanding_Balance"]
+    .sum()
+    .reset_index()
+)
+
+total_ar = ar["Outstanding_Balance"].sum()
+aged_60 = ar.loc[
+    ar["Days_Outstanding"] > 60, "Outstanding_Balance"
+].sum()
+
+aged_60_pct = (aged_60 / total_ar * 100) if total_ar else 0
+
+# Receivables KPI cards
+k1, k2, k3 = st.columns(3)
+
+with k1:
     st.metric("Total Outstanding", f"₹{total_ar:,.0f}")
-    st.metric("Outstanding > 60 days", f"₹{aged_60:,.0f}")
-    st.metric("% of Receivables > 60 days", f"{aged_60/total_ar*100:.1f}%" if total_ar else "0%")
+
+with k2:
+    st.metric("Outstanding > 60 Days", f"₹{aged_60:,.0f}")
+
+with k3:
+    st.metric("Receivables > 60 Days", f"{aged_60_pct:.1f}%")
+
+st.divider()
+
+# Receivables chart
+fig = px.bar(
+    ar_summary,
+    x="Ageing_Bucket",
+    y="Outstanding_Balance",
+    title="Receivables Ageing Analysis",
+    labels={
+        "Ageing_Bucket": "Ageing Period",
+        "Outstanding_Balance": "Outstanding Amount (₹)"
+    }
+)
+
+fig.update_layout(
+    template="plotly_white",
+    xaxis_title="Ageing Period",
+    yaxis_title="Outstanding Amount (₹)"
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 # Inventory alerts
 st.subheader("Inventory Intelligence")
@@ -796,56 +845,7 @@ for message in st.session_state.finsight_chat:
         st.markdown(message["content"])
 
 user_question = st.chat_input("Ask a question about the financial data shown above…")
-def validate_financial_kpis(context):
-    """Validate basic financial KPI calculations."""
-
-    kpis = context.get("kpis", {})
-    checks = {}
-
-    revenue = kpis.get("revenue_inr")
-    cogs = kpis.get("cogs_inr")
-    gross_profit = kpis.get("gross_profit_inr")
-    expenses = kpis.get("operating_expenses_inr")
-    operating_profit = kpis.get("operating_profit_inr")
-    operating_margin = kpis.get("operating_margin_percent")
-
-    if all(v is not None for v in [revenue, cogs, gross_profit]):
-        checks["gross_profit"] = abs(
-            (revenue - cogs) - gross_profit
-        ) < 0.01
-
-    if all(v is not None for v in [gross_profit, expenses, operating_profit]):
-        checks["operating_profit"] = abs(
-            (gross_profit - expenses) - operating_profit
-        ) < 0.01
-
-    if all(v is not None for v in [revenue, operating_profit, operating_margin]) and revenue != 0:
-        calculated_margin = (operating_profit / revenue) * 100
-        checks["operating_margin"] = abs(
-            calculated_margin - operating_margin
-        ) < 0.01
-
-    return checks
-
-# Financial KPI Validation Panel
-st.subheader("Financial KPI Validation")
-
-financial_checks = validate_financial_kpis(financial_context)
-
-validation_labels = {
-    "gross_profit": "Gross Profit Calculation",
-    "operating_profit": "Operating Profit Calculation",
-    "operating_margin": "Operating Margin Calculation"
-}
-
-for key, label in validation_labels.items():
-    if key in financial_checks:
-        if financial_checks[key]:
-            st.success(f"{label}: Passed")
-        else:
-            st.error(f"{label}: Failed")
-    else:
-        st.warning(f"{label}: Insufficient data")
+    
 
 if user_question:
     st.session_state.finsight_chat.append(
@@ -858,8 +858,6 @@ if user_question:
     with st.chat_message("assistant"):
         with st.spinner("Gemini is analyzing your financial data..."):
             answer = ""
-
-            financial_checks = validate_financial_kpis(financial_context)
 
             try:
                 import requests
@@ -878,7 +876,7 @@ if user_question:
                 gemini_payload = {
                     "systemInstruction": {
                         "parts": [{
-                            "text": system_prompt + "\n\nPYTHON VALIDATION RESULTS: " + json.dumps(financial_checks) + """
+                            "text": system_prompt + """
 
 FINANCIAL ANSWER VALIDATION RULES:
 
