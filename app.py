@@ -827,6 +827,26 @@ def validate_financial_kpis(context):
 
     return checks
 
+# Financial KPI Validation Panel
+st.subheader("Financial KPI Validation")
+
+financial_checks = validate_financial_kpis(financial_context)
+
+validation_labels = {
+    "gross_profit": "Gross Profit Calculation",
+    "operating_profit": "Operating Profit Calculation",
+    "operating_margin": "Operating Margin Calculation"
+}
+
+for key, label in validation_labels.items():
+    if key in financial_checks:
+        if financial_checks[key]:
+            st.success(f"{label}: Passed")
+        else:
+            st.error(f"{label}: Failed")
+    else:
+        st.warning(f"{label}: Insufficient data")
+
 if user_question:
     st.session_state.finsight_chat.append(
         {"role": "user", "content": user_question}
