@@ -786,56 +786,82 @@ FINANCIAL CONTEXT (JSON):
 if "finsight_chat" not in st.session_state:
     st.session_state.finsight_chat = []
 
+
 with st.expander("AI Analyst settings", expanded=False):
-    ollama_model = st.text_input("Ollama model", value="qwen2.5:3b", key="finsight_model")
-    st.write("Ollama must be running on this computer at http://localhost:11434.")
+    st.write("Powered by Google Gemini AI.")
 
 for message in st.session_state.finsight_chat:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 user_question = st.chat_input("Ask a question about the financial data shown above…")
+
 if user_question:
-    st.session_state.finsight_chat.append({"role": "user", "content": user_question})
+    st.session_state.finsight_chat.append(
+        {"role": "user", "content": user_question}
+    )
+
     with st.chat_message("user"):
         st.markdown(user_question)
+
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing your financial data locally…"):
+        with st.spinner("Gemini is analyzing your financial data..."):
+            answer = ""
+
             try:
                 import requests
-                ollama_payload = {
-                    "model": ollama_model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        *st.session_state.finsight_chat[-8:],
-                    ],
-                    "stream": False,
-                    "options": {"temperature": 0.2}
+
+                api_key = st.secrets["GEMINI_API_KEY"]
+
+                gemini_contents = []
+
+                for msg in st.session_state.finsight_chat[-9:]:
+                    gemini_contents.append({
+                        "role": "model" if msg["role"] == "assistant" else "user",
+                        "parts": [{"text": msg["content"]}]
+                    })
+
+                gemini_payload = {
+                    "systemInstruction": {
+                        "parts": [{"text": system_prompt}]
+                    },
+                    "contents": gemini_contents,
+                    "generationConfig": {
+                        "temperature": 0.2
+                    }
                 }
+
                 response = requests.post(
-                    "http://localhost:11434/api/chat",
-                    json=ollama_payload,
-                    timeout=180
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                    headers={
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": api_key
+                    },
+                    json=gemini_payload,
+                    timeout=120
                 )
+
                 response.raise_for_status()
-                answer = response.json().get("message", {}).get("content", "No response returned by the model.")
+
+                result = response.json()
+
+                answer = (
+                    result["candidates"][0]["content"]["parts"][0]["text"]
+                )
+
                 st.markdown(answer)
-            except requests.exceptions.ConnectionError:
-                answer = "I couldn't connect to Ollama. Please ensure Ollama is running, then refresh/retry."
-                st.error(answer)
+
             except requests.exceptions.Timeout:
-                answer = "The model took too long to respond. Try a shorter question or wait and retry."
+                answer = "Gemini took too long to respond. Please try again."
                 st.error(answer)
+
             except Exception as exc:
-                answer = f"Something went wrong while contacting Ollama: {exc}"
+                answer = f"Gemini AI error: {exc}"
                 st.error(answer)
-    st.session_state.finsight_chat.append({"role": "assistant", "content": answer})
 
-if st.button("Clear AI chat history"):
-    st.session_state.finsight_chat = []
-    st.rerun()
-
-st.caption("AI responses can still contain mistakes. Verify important financial decisions against the underlying data.")
+    st.session_state.finsight_chat.append(
+        {"role": "assistant", "content": answer}
+    )
 
 # ============================================================
 # PHASE 9: EXECUTIVE REPORT GENERATOR
