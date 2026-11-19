@@ -821,7 +821,7 @@ if user_question:
                         "parts": [{"text": msg["content"]}]
                     })
 
-                             gemini_payload = {
+                gemini_payload = {
                     "systemInstruction": {
                         "parts": [{
                             "text": system_prompt + """
@@ -846,6 +846,7 @@ FINANCIAL ANSWER VALIDATION RULES:
                         "temperature": 0.2
                     }
                 }
+
                 response = requests.post(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
                     headers={
