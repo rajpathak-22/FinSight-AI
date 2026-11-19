@@ -821,10 +821,10 @@ if user_question:
                         "parts": [{"text": msg["content"]}]
                     })
 
-                gemini_payload = {
+                             gemini_payload = {
                     "systemInstruction": {
-    "parts": [{
-        "text": system_prompt + """
+                        "parts": [{
+                            "text": system_prompt + """
 
 FINANCIAL ANSWER VALIDATION RULES:
 
@@ -839,15 +839,13 @@ FINANCIAL ANSWER VALIDATION RULES:
 9. Preserve the original currency and units. Use Indian number formatting where appropriate.
 10. Never claim that a figure has been independently audited or verified against the original books unless that verification was actually performed.
 """
-    }]
-},
+                        }]
                     },
                     "contents": gemini_contents,
                     "generationConfig": {
                         "temperature": 0.2
                     }
                 }
-
                 response = requests.post(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
                     headers={
