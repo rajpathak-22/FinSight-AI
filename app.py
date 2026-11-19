@@ -78,7 +78,7 @@ else:
 
 filtered_sales = sales[
     (sales["Date"] >= start_date) &
-    (sales["Date"] <= end_date) &
+    (sales["Date"] < end_date + pd.Timedelta(days=1)) &
     (sales["Category"].isin(selected_categories)) &
     (sales["Region"].isin(selected_regions))
 ].copy()
@@ -467,7 +467,7 @@ scenario_salary_change = st.slider("Salary expense change (%)", -20, 30, 0, 1, k
 
 base_revenue = float(revenue)
 base_gross_profit = float(gp)
-base_gross_margin = float(gm) / 100.0 if abs(float(gm)) > 1 else float(gm)
+base_gross_margin = float(gm) / 100.0
 base_opex = float(opex)
 base_operating_profit = float(op_profit)
 
